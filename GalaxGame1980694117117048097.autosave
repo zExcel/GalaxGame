@@ -1,0 +1,197 @@
+int monsterCol = 10;
+int monsterRow = 5;
+String monsterImage = "Invader.jpg";
+String shipImage = "Ship.png";
+String bulletImage = "Bullet.png";
+String blankImage = "Blank.png";
+int widthSpace = 20;
+int heightSpace = 20;
+int xmov = 10;
+int ymov = 10;
+int spriteDim = 50;
+int bulletH = 6;
+int fluff = 120;
+int counter = 0;
+boolean sideways = false;
+boolean keys[]; //Have LEFT be index 0, RIGHT be index 1,space be index 2
+int amtKeys = 3;
+
+Sprite monsters[][];
+Sprite ship;
+Sprite bullet;
+
+
+class Sprite
+{
+  public PImage image;
+  public int x,y,width,height;
+  public boolean blank = false;
+
+  Sprite(String file,int xx,int yy)
+  {
+    image = loadImage(file);
+    x = xx;
+    y = yy;
+    width = image.width;
+    height = image.height;
+  }
+
+  void updateCoords(int addX,int addY)
+  {
+    x += addX;
+    y += addY;
+  }
+
+  void updateImage(String file)
+  {
+    image = loadImage(file);
+    width = image.width;
+    height = image.height;
+  }
+
+  void draw()
+  {
+    image(image,x,y);
+  }
+}
+
+
+void setup()
+{
+  size(960,900);
+  background(0);
+  frameRate(60);
+  keys = new boolean[amtKeys];
+  for(int i=0; i<amtKeys; i++)
+  {
+    keys[i] = false;
+  }
+  monsters = new Sprite[monsterRow][monsterCol];
+  for (int r = 0; r < monsterRow; ++r) 
+  {
+    for (int c = 0; c < monsterCol; ++c) 
+    {
+      if(c!=0)
+      {
+        monsters[r][c] = new Sprite(monsterImage,spriteDim*c + widthSpace*c+fluff,loadImage(monsterImage).height*r);
+      }
+      else
+      {
+        monsters[r][c] = new Sprite(monsterImage,spriteDim*c + fluff,loadImage(monsterImage).height*r);
+      }
+    }
+  }
+  ship = new Sprite(shipImage,width/2,height - spriteDim);
+  bullet = new Sprite(bulletImage,-1,-1);
+}
+
+void pre()
+{
+  ShipMovement();
+  ship.draw();
+  if(counter!=0 && counter%12==0)
+  {
+    MonsterMovement();
+  }
+  BulletMovement();
+  if(bullet.x!=-1)
+  {
+    bullet.updateCoords(0,-1*ymov);
+    if(bullet.y<0)
+    {
+      bullet.y = -1;
+      bullet.x = -1;
+    }
+    bullet.draw();
+  }
+  collisionCheck();
+  counter++;
+}
+
+void draw()
+{
+  println(bullet.x);
+  background(0);
+  pre();
+  for (int r = 0; r < monsterRow; ++r) 
+  {
+    for (int c = 0; c < monsterCol; ++c) 
+    {
+      if(!monsters[r][c].blank)
+        monsters[r][c].draw();
+    }
+  }
+}
+
+boolean touchingSprite(Sprite sprite1,Sprite sprite2)
+{
+  int s2W = sprite2.width;
+  int s2H = sprite2.height;
+
+  int s1W = sprite1.width;
+  int s1H = sprite1.height;
+
+  int s1X = sprite1.x;
+  int s1Y = sprite1.y;
+  int s2X = sprite2.x;
+  int s2Y = sprite2.y;
+
+  s2W += s2X;
+  s2H += s2Y;
+  s1W += s1X;
+  s1H += s1Y;
+
+  return ((s2W < s2X || s2W > s1X) && (s2H < s2Y || s2H > s1Y)
+    && (s1W < s1X || s1W > s2X) && (s1H < s1Y || s1H > s2Y));
+}
+
+boolean collisionCheck()
+{
+  for(int r=0; r<monsterRow; r++)
+  {
+    for(int c=0; c<monsterCol; c++)
+    {
+          //println(touchingSprite(bullet,monsters[r][c]));
+        if(!monsters[r][c].blank && touchingSprite(bullet,monsters[r][c]))
+          {
+            monsters[r][c] = 
+            new Sprite(blankImage,monsters[r][c].x,monsters[r][c].y);
+            monsters[r][c].blank = true;
+            bullet.x = -1;
+            bullet.y = -1;
+            return true;
+          }
+      }
+  }
+  return false;
+}
+
+
+
+
+void keyPressed()
+{
+  if(key==' ' && bullet.x==-1)
+    keys[2] = true;
+
+  if(key==CODED)
+  {
+    if(keyCode==LEFT)
+      keys[0] = true;
+    if(keyCode==RIGHT)
+      keys[1] = true;
+  }
+}
+
+void keyReleased()
+{
+  if(key==' ')
+    keys[2] = false;
+  if(key==CODED)
+  {
+    if(keyCode == LEFT)
+      keys[0] = false;
+    if(keyCode == RIGHT)
+      keys[1] = false;
+  }
+}

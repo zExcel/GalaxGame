@@ -1,0 +1,67 @@
+import processing.sound.*;
+import java.util.*;
+import java.io.*;
+
+void setup()            
+{
+    soundsPlaying = new ArrayList<SoundFile>();
+    durations = new ArrayList<Float>();
+    startTime = new ArrayList<Integer>();
+    Background1 = new SoundFile(GalaxGame.this,BGM1);
+    Background1.play();
+    Background1.amp(.2);
+    //Background1.loop();
+
+    SoundFile explosionSound = new SoundFile(GalaxGame.this,explosionSoundFile);
+    SoundFile shipShootSound = new SoundFile(GalaxGame.this,shipShootSF);
+  	size(960,900);
+    explosion = new Animation(explosionPrefix,100,"png",5);
+    explosion.stretch(4);
+    invaderExplosion = new Sprite(invaderExp,100,"png",5);
+    invaderExplosion.image.stretch(2);
+
+    invaderDeath = new Sprite(invaderD,0,0);
+    invaderDeath.image.stretch(5);
+
+  	gameOverScreen = loadImage("GameOver.png");
+  	background(0);
+  	frameRate(60);
+  	keys = new boolean[amtKeys];
+  	for(int i=0; i<amtKeys; i++)
+  	{
+    	keys[i] = false;
+  	}
+  	monsters = new Sprite[monsterRow][monsterCol];
+    initializeGrid(monsters);
+
+  	ship = new Sprite(shipImage,width/2,height - spriteDim);
+  	bullet = new Sprite(bulletImage,-1,-1);
+    LeaderBoard = new ArrayList<String>();
+    try
+    {
+        input = new Scanner(new File(dataPath("LeaderBoard.txt")));
+    }
+    catch(Exception e)
+    {
+        println("There is no leaderboard text file");
+    }
+    while(input.hasNextLine())
+    {
+        LeaderBoard.add(input.nextLine());
+    }
+}
+
+void draw()
+{
+	//println(bullet.x);
+	//println(lastRow);
+	if(!gameOver)
+	{
+        Game();
+  	}
+  	else
+  	{
+        GameOver();
+        
+  	}
+}

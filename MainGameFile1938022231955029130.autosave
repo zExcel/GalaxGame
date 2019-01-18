@@ -1,0 +1,347 @@
+//============ WHEN THE GAME IS RUNNING THESE ARE GOING ===========
+
+void pre()
+{
+	lastRow = lastRowCheck();
+    leftMostColumn = leftColumnCheck();
+    rightMostColumn = rightColumnCheck();
+  	ShipMovement();
+  	ship.draw(ship,false);
+  	ship.Clamp();
+  	if(counter!=0 && counter%12==0)
+  	{
+    	MonsterMovement();
+  	}
+  	monsters[attackingRow][attackingColumn].Clamp();
+  	BulletMovement();
+
+  	collisionCheck();
+  	if(monstersLeft==0)
+  	{
+  		lastRow = monsterRow - 1;
+        leftMostColumn = 0;
+        rightMostColumn = monsterCol - 1;
+  		initializeGrid(monsters);
+	  	monstersLeft = monsterRow * monsterCol;
+  	}
+  	counter++;
+}
+
+void Game()         
+{
+	background(0);
+	deleteDanglingSounds();
+	//background(color(random(0,255),random(0,255),random(0,255)));
+	textSize(32);
+	fill(255);
+	text("Score: " + score,0,50);
+  	pre();
+  	for (int r = 0; r < monsterRow; ++r) 
+  	{
+    	for (int c = 0; c < monsterCol; ++c) 
+    	{
+      		if(!monsters[r][c].blank)
+      		{
+      			//monsters[r][c].draw(ship,true);
+        		monsters[r][c].draw(ship,monsters[r][c].attacking);
+      		}
+    	}
+  	}
+
+    for(int i=0; i<exploding.size(); i++)
+    {
+        exploding.get(i).draw(ship,false);
+        if(exploding.get(i).image.currentFrame==0)
+        {
+            exploding.remove(i);
+            i--;
+        }
+    }
+
+  	/*if(bullet.x!=-1)
+  	{
+  		bullet.draw(ship,false);
+  	}*/
+  	for(int i=0; i<bullets.size(); i++)
+  	{
+  		bullets.get(i).draw(ship,false);
+  	}
+}
+
+void deleteDanglingSounds()
+{
+	for(int i=0; i<soundsPlaying.size(); i++)
+	{
+		float current = startTime.get(i) + durations.get(i)*1000;
+		if(millis()>=current)
+		{
+			soundsPlaying.get(i).dispose();
+			soundsPlaying.remove(i);
+			i--;
+		}
+	}
+}
+
+boolean touchingSprite(Sprite sprite1,Sprite sprite2)
+{
+ 	float s2W = sprite2.imageWidth;
+  	float s2H = sprite2.imageHeight;
+
+  	float s1W = sprite1.imageWidth;
+  	float s1H = sprite1.imageHeight;
+
+  	float s1X = sprite1.x;
+  	float s1Y = sprite1.y;
+  	float s2X = sprite2.x;
+  	float s2Y = sprite2.y;
+
+  	s2W += s2X;
+  	s2H += s2Y;
+  	s1W += s1X;
+  	s1H += s1Y;
+
+  	return ((s2W < s2X || s2W > s1X) && (s2H < s2Y || s2H > s1Y)
+    	&& (s1W < s1X || s1W > s2X) && (s1H < s1Y || s1H > s2Y));
+}
+
+boolean collisionCheck()
+{
+	for(int r=0; r<monsterRow; r++)
+  	{
+    	for(int c=0; c<monsterCol; c++)
+    	{
+          	//println(touchingSprite(bullet,monsters[r][c]));
+          	for(int i = 0; i<bullets.size(); i++)
+          	{
+          		if(!monsters[r][c].blank && !bullets.get(i).enemy && touchingSprite(bullets.get(i),monsters[r][c]))
+	          	{
+	          		monsters[r][c].health--;
+	          		if(monsters[r][c].health!=0)
+	          		{
+	          			ship.activeBullet = false;
+	          			bullets.remove(i);
+	          			//println("Inside here");
+	          			return true;
+	          			//i = bullets.size();
+	          		}
+	            	if(monsters[r][c].attacking)
+	            	{
+	            		monsters[r][c].attacking = false;
+	            		attackingMonster = false;
+                        score+=10;
+	            	}
+
+                    Sprite temp = invaderDeath;
+                    temp.x = monsters[r][c].x;
+                    temp.y = monsters[r][c].y;
+                    exploding.add(temp);
+                    SoundFile explosionSound = new SoundFile(GalaxGame.this,invaderDSF);
+                    soundsPlaying.add(explosionSound);
+                    soundsPlaying.get(soundsPlaying.size()-1).play();
+                    soundsPlaying.get(soundsPlaying.size()-1).amp(.2);
+                    soundsPlaying.get(soundsPlaying.size()-1).rate(11025.0/44100);
+                    durations.add(explosionSound.duration());
+                    startTime.add(millis());
+
+	            	ship.activeBullet = false;
+	            	monsters[r][c] = 
+	            	new Sprite(blankImage,monsters[r][c].x,monsters[r][c].y);
+	            	monsters[r][c].blank = true;
+	            	bullets.remove(i);
+	            	//i=bullets.size();
+	            	monstersLeft--;
+	            	score+=10;
+
+
+	            	return true;
+	          	}
+                else if(bullets.get(i).enemy && !ship.blank && touchingSprite(ship,bullets.get(i)))
+                {
+                    ship = new Sprite(blankImage,ship.x,ship.y);
+                    ship.blank = true;
+                    gameOver = true;
+                    SoundFile explosionSound = new SoundFile(GalaxGame.this,explosionSoundFile);
+                    soundsPlaying.add(explosionSound);
+                    soundsPlaying.get(soundsPlaying.size()-1).play();
+                    soundsPlaying.get(soundsPlaying.size()-1).amp(1);
+                    //durations.add(explosionSound.duration());
+                    //startTime.add(millis());
+                    //println("Game over");
+                }
+          	}
+        	
+          	if(!monsters[r][c].blank && touchingSprite(ship,monsters[r][c]))
+          	{
+          		ship = new Sprite(blankImage,ship.x,ship.y);
+          		ship.blank = true;
+          		gameOver = true;
+          		//println("Game over");
+          	}
+      	}
+  	}
+  	return false;
+}
+
+void initializeGrid(Sprite grid[][])
+{
+    for(int r=0; r<grid.length; r++)
+    {
+        for(int c=0; c<grid[r].length; c++)
+        {
+            if(c!=0)
+            {
+                grid[r][c] = new Sprite(monsterImageWhite,100,"png",5);
+                grid[r][c].setCoords(spriteDim*c + widthSpace*c + widthFluff,grid[r][c].imageHeight*r+heightFluff);
+                //grid[r][c] = new Sprite(monsterImageWhite,spriteDim*c + widthSpace*c+widthFluff,loadImage(monsterImageWhite).height*r + heightFluff);
+            }
+            else
+            {
+                grid[r][c] = new Sprite(monsterImageWhite,100,"png",5);
+                grid[r][c].setCoords(spriteDim*c + widthFluff,grid[r][c].imageHeight*r + heightFluff);
+                //grid[r][c] = new Sprite(monsterImageWhite,spriteDim*c + widthFluff,loadImage(monsterImageWhite).height*r + heightFluff);
+            }
+            grid[r][c].health = stage;
+            grid[r][c].blank = false;
+            grid[r][c].image.stretch(30);
+        }
+    }
+    stage++;
+}
+
+int lastRowCheck()
+{
+	for(int i=0; i<monsterCol; i++)
+	{
+		if(!monsters[lastRow][i].blank)
+		{
+			return lastRow;
+		}
+	}
+	return lastRow - 1;
+}
+
+int leftColumnCheck()
+{
+    for(int r=0; r<monsterRow; r++)
+    {
+        if(!monsters[r][leftMostColumn].blank)
+            return leftMostColumn;
+    }
+    return leftMostColumn + 1;
+}
+
+int rightColumnCheck()
+{
+    for(int r=0; r<monsterRow; r++)
+    {
+        if(!monsters[r][rightMostColumn].blank)
+            return rightMostColumn;
+    }
+    return rightMostColumn - 1;
+}
+
+
+//============ WHEN THE GAME IS RUNNING THESE ARE GOING ===========
+
+
+int getScore(String person)
+{
+	int currentScore = 0;
+	int index = person.lastIndexOf(' ') + 1;
+	//println("index is " + index);
+	//println("character at index is " + person.charAt(index));
+	while(index<person.length() && person.charAt(index)>='0' && person.charAt(index)<='9')
+	{
+		currentScore*=10;
+		currentScore+=person.charAt(index)-'0';
+		index++;
+	}
+	return currentScore;
+}
+
+void GameOver()
+{
+	if(playing)
+	{
+		//println("In here");
+		Background1.stop();
+		//Background1 = null;
+		playing = false;
+	}
+	if(explosion.currentFrame!=explosion.numFrames-1)
+    {
+        imageMode(CORNER);
+        fill(0);
+        rect(ship.x,ship.y,ship.imageWidth,ship.imageHeight);
+        explosion.draw(ship.x,ship.y);
+        explosion.timer += explosion.delay;
+    }
+    else
+    {
+        imageMode(CORNER);
+        image(gameOverScreen,0,0);
+        textSize(32);
+        fill(0);
+        text("Score: " + score,390,200);
+        textSize(64);
+        text("LeaderBoard",280,270);
+        for(int i=0; i<LeaderBoard.size(); i++)
+        {
+        	textSize(32);
+        	text(LeaderBoard.get(i),280,300+30*i);
+        }
+
+        if(enteredName)
+        {
+        	noLoop();
+
+        }
+
+        if(score>getScore(LeaderBoard.get(LeaderBoard.size()-1)) && (inputtingName || name.length()==0))
+        {
+        	inputtingName = true;
+        	//println("Inside here");
+        }
+        if(!enteredName && score>getScore(LeaderBoard.get(LeaderBoard.size()-1)))
+        {
+        	text("Input name: ",280,600);
+        	text(name,500,600);
+        }
+        if(!enteredName && score>getScore(LeaderBoard.get(LeaderBoard.size()-1)) && !inputtingName)
+        {
+        	for(int i=0; i<LeaderBoard.size(); i++)
+        	{
+        		//println(LeaderBoard.get(i));
+        		//println(getScore(LeaderBoard.get(i)));
+        		if(score>getScore(LeaderBoard.get(i)))
+        		{
+        			for(int j=LeaderBoard.size()-1; j>i; j--)
+        			{
+        				String temp = LeaderBoard.get(j-1);
+        				temp = temp.substring(temp.indexOf(' '));
+        				temp = (j+1)+"."+temp;
+        				LeaderBoard.set(j,temp);
+        			}
+        			LeaderBoard.set(i,(i+1) + ". " + name + " " + score);
+        			break;
+        		}
+        	}
+        	try
+        	{
+        		FileWriter output = new FileWriter(new File(dataPath("LeaderBoard.txt")));
+        		for(int i=0; i<LeaderBoard.size(); i++)
+        		{
+        			output.write(LeaderBoard.get(i));
+        			output.write("\n");
+        		}
+        		output.flush();
+        		output.close();
+        	}
+        	catch (Exception e)
+        	{
+        		println("Couldn't write to the file.");
+        	}
+        	enteredName = true;
+        }
+    }
+}
